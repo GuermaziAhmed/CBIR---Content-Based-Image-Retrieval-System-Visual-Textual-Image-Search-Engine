@@ -1,0 +1,9 @@
+# This directory stores precomputed descriptor vectors
+# Organized by descriptor type:
+# descriptors/
+#   ├── color/
+#   ├── lbp/
+#   ├── hog/
+#   └── mpeg7/
+
+# Each subdirectory contains .npy files with feature vectors

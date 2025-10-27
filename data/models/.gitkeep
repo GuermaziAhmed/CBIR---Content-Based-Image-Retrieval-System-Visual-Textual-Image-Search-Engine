@@ -1,0 +1,2 @@
+# This file ensures the models directory is tracked by Git
+# VGG model weights will be downloaded here automatically by TensorFlow

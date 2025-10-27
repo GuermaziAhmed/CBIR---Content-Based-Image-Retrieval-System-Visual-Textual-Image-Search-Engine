@@ -1,0 +1,11 @@
+# This directory stores images for the CBIR system
+# Place your image files here (JPG, PNG, BMP, GIF)
+
+# Example structure:
+# images/
+#   ├── cat_001.jpg
+#   ├── dog_001.jpg
+#   ├── car_001.jpg
+#   └── ...
+
+# The indexer will scan this directory and add all images to the database

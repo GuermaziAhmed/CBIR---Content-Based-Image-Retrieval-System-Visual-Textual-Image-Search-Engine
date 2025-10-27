@@ -1,0 +1,158 @@
+version: '3.8'
+
+services:
+  # Elasticsearch - Search Engine & Database
+  elasticsearch:
+    image: docker.elastic.co/elasticsearch/elasticsearch:8.11.0
+    container_name: cbir_elasticsearch
+    environment:
+      - node.name=es-node-1
+      - cluster.name=cbir-cluster
+      - discovery.type=single-node
+      - bootstrap.memory_lock=true
+      - "ES_JAVA_OPTS=-Xms2g -Xmx2g"
+      - xpack.security.enabled=false
+      - xpack.security.enrollment.enabled=false
+      - xpack.ml.enabled=true
+    ulimits:
+      memlock:
+        soft: -1
+        hard: -1
+      nofile:
+        soft: 65536
+        hard: 65536
+    volumes:
+      - elasticsearch_data:/usr/share/elasticsearch/data
+    ports:
+      - "9200:9200"
+      - "9300:9300"
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:9200/_cluster/health || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+    networks:
+      - cbir_network
+
+  # Logstash - Data Ingestion Pipeline
+  logstash:
+    image: docker.elastic.co/logstash/logstash:8.11.0
+    container_name: cbir_logstash
+    volumes:
+      - ./logstash/pipeline:/usr/share/logstash/pipeline
+      - ./logstash/config/logstash.yml:/usr/share/logstash/config/logstash.yml
+      - ./data/csv:/data/csv
+      - ./data/images:/data/images
+    ports:
+      - "5000:5000"
+      - "9600:9600"
+    environment:
+      - "LS_JAVA_OPTS=-Xmx512m -Xms512m"
+      - ELASTICSEARCH_HOSTS=http://elasticsearch:9200
+    depends_on:
+      elasticsearch:
+        condition: service_healthy
+    networks:
+      - cbir_network
+
+  # Kibana - Visualization & Management (Optional)
+  kibana:
+    image: docker.elastic.co/kibana/kibana:8.11.0
+    container_name: cbir_kibana
+    environment:
+      - ELASTICSEARCH_HOSTS=http://elasticsearch:9200
+      - ELASTICSEARCH_URL=http://elasticsearch:9200
+      - SERVER_NAME=kibana
+      - SERVER_HOST=0.0.0.0
+    ports:
+      - "5601:5601"
+    depends_on:
+      elasticsearch:
+        condition: service_healthy
+    networks:
+      - cbir_network
+    profiles:
+      - admin
+
+  # FastAPI Backend - Updated for Elasticsearch
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile.es
+    container_name: cbir_backend
+    environment:
+      - ELASTICSEARCH_HOST=elasticsearch
+      - ELASTICSEARCH_PORT=9200
+      - ELASTICSEARCH_INDEX=flickr_images
+      - IMAGE_DIR=/data/images
+      - VGG_MODEL=vgg16  # or vgg19
+      - VGG_LAYER=fc2    # Feature layer
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./data/images:/data/images
+      - ./data/models:/data/models  # Pre-trained VGG weights
+      - ./backend:/app
+    depends_on:
+      elasticsearch:
+        condition: service_healthy
+    command: uvicorn main:app --host 0.0.0.0 --port 8000 --reload
+    networks:
+      - cbir_network
+
+  # Next.js Frontend - Updated UI
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: cbir_frontend
+    environment:
+      - NEXT_PUBLIC_API_URL=http://localhost:8000
+      - NEXT_PUBLIC_MAPBOX_TOKEN=${MAPBOX_TOKEN:-}  # Optional for maps
+    ports:
+      - "3000:3000"
+    volumes:
+      - ./frontend:/app
+      - /app/node_modules
+      - /app/.next
+    depends_on:
+      - backend
+    command: npm run dev
+    networks:
+      - cbir_network
+
+  # Python Data Ingestion Service (Run once or on-demand)
+  ingestion:
+    build:
+      context: ./scripts
+      dockerfile: Dockerfile.ingestion
+    container_name: cbir_ingestion
+    environment:
+      - ELASTICSEARCH_HOST=elasticsearch
+      - ELASTICSEARCH_PORT=9200
+      - CSV_PATH=/data/csv/photo_metadata.csv
+      - IMAGE_DIR=/data/images
+      - DOWNLOAD_IMAGES=true
+      - EXTRACT_FEATURES=true
+      - BATCH_SIZE=100
+    volumes:
+      - ./data/csv:/data/csv
+      - ./data/images:/data/images
+      - ./data/models:/data/models
+      - ./scripts:/app
+    depends_on:
+      elasticsearch:
+        condition: service_healthy
+    networks:
+      - cbir_network
+    profiles:
+      - ingestion  # Run with: docker-compose --profile ingestion up ingestion
+
+volumes:
+  elasticsearch_data:
+    driver: local
+  node_modules:
+
+networks:
+  cbir_network:
+    driver: bridge

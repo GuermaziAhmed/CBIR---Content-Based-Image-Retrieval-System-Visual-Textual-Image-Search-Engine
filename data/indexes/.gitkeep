@@ -1,0 +1,10 @@
+# This directory stores Faiss index files
+# Files:
+#   - color.index
+#   - color_ids.pkl
+#   - lbp.index
+#   - lbp_ids.pkl
+#   - hog.index
+#   - hog_ids.pkl
+#   - mpeg7.index
+#   - mpeg7_ids.pkl
