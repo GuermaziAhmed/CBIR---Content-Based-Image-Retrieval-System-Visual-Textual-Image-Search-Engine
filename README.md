@@ -1,120 +1,1025 @@
-# CBIR - Content-Based Image Retrieval System# 🧠 Visual & Textual Image Search Engine
+# CBIR - Content-Based Image Retrieval System# CBIR - Content-Based Image Retrieval System
 
 
 
-**Elasticsearch + VGG Deep Learning | Flickr Dataset | Visual Search Engine**A full-stack content-based image retrieval (CBIR) system combining visual descriptors and textual metadata.
+**Elasticsearch + VGG Deep Learning | Flickr Dataset | Visual Search Engine****Elasticsearch + VGG Deep Learning | Flickr Dataset | Visual Search Engine**
 
 
 
----## 🎯 Features
+------
 
 
 
-## 🚀 Quick Start (3 Steps)- **Visual Search**: Upload an image and find similar images using MPEG-7 + custom descriptors
-
-- **Text Search**: Search by keywords (tags, filenames, captions)
-
-```powershell- **Hybrid Search**: Combine visual + textual queries
-
-# 1. Start Elasticsearch- **Multiple Descriptors**: Color Histogram, LBP, HOG, MPEG-7
-
-docker-compose up -d elasticsearch- **Fast Retrieval**: <1s for top-100 results using Faiss indexing
-
-Start-Sleep -Seconds 60- **Scalable**: Supports up to 1M images
+## 🎯 Features## 🎯 Features
 
 
 
-# 2. Create index and ingest sample data## 🏗️ Architecture
+- **Visual Search**: Upload an image and find similar images using VGG16/VGG19 deep learning- **Visual Search**: Upload an image and find similar images using VGG16/VGG19 deep learning
 
-cd scripts
+- **Text Search**: Search by tags, titles, and descriptions- **Text Search**: Search by tags, titles, and descriptions
 
-pip install -r requirements.txt```
+- **Geo Search**: Find images by location (latitude/longitude)- **Geo Search**: Find images by location (latitude/longitude)
 
-python elasticsearch_mapping.pyFrontend (Next.js) ↔ Backend (FastAPI) ↔ PostgreSQL + Faiss Index
+- **Hybrid Search**: Combine visual + textual + geo queries- **Hybrid Search**: Combine visual + textual + geo queries
 
-python ingest_flickr_data.py --csv ..\data\csv\sample_photo_metadata.csv --limit 10                                         ↔ Local Image Storage
+- **90% Disk Savings**: Auto-delete images after feature extraction- **90% Disk Savings**: Auto-delete images after feature extraction
 
-```
-
-# 3. Start application
-
-cd ..## 📦 Tech Stack
-
-docker-compose up -d backend frontend
-
-```- **Frontend**: Next.js 14, React, TailwindCSS
-
-- **Backend**: FastAPI, Python 3.11
-
-**Access:** http://localhost:3000- **Database**: PostgreSQL
-
-- **Indexing**: Faiss (Facebook AI Similarity Search)
-
----- **Image Processing**: OpenCV, scikit-image
-
-- **Deployment**: Docker Compose
-
-## 📊 System Overview
-
-## 🚀 Quick Start
-
-### What This Does
-
-- **Visual Search**: Upload an image → Find visually similar images### Prerequisites
-
-- **Text Search**: Search by tags, titles, locations  
-
-- **Geo Search**: Find images near a location- Docker & Docker Compose
-
-- **Hybrid Search**: Combine visual + text + location- Node.js 18+ (for local development)
-
-- Python 3.11+ (for local development)
-
-### Technology Stack
-
-- **Search Engine**: Elasticsearch 8.11 with kNN### Installation
-
-- **Deep Learning**: VGG16/VGG19 for feature extraction
-
-- **Dataset**: Flickr images from CSV metadata1. **Clone the repository**
-
-- **Backend**: FastAPI (Python)```bash
-
-- **Frontend**: Next.js (React)cd c:\projects\CBIR
-
-- **Data Pipeline**: Logstash for CSV ingestion```
+- **Scalable**: Handles millions of images with Elasticsearch kNN- **Scalable**: Handles millions of images with Elasticsearch kNN
 
 
 
-### Key Features2. **Start all services**
+------
 
-- ✅ **90% Disk Space Savings** - Images auto-deleted after feature extraction```bash
 
-- ✅ **VGG Features** - 4096-dim deep learning embeddingsdocker-compose up --build
 
-- ✅ **Geo-search** - Search by latitude/longitude```
+## 🏗️ Architecture## 🏗️ Architecture
 
-- ✅ **Scalable** - Handles millions of images
 
-- ✅ **Dockerized** - One-command deployment3. **Access the application**
 
-- Frontend: http://localhost:3000
+``````
 
----- Backend API: http://localhost:8000
+Frontend (Next.js) ↔ Backend (FastAPI) ↔ Elasticsearch + kNNFrontend (Next.js) ↔ Backend (FastAPI) ↔ Elasticsearch + kNN
 
-- API Docs: http://localhost:8000/docs
+                                         ↔ Logstash (CSV ingestion)                                         ↔ Logstash (CSV ingestion)
 
-## 📁 Project Structure
+                                         ↔ VGG Feature Extractor                                         ↔ VGG Feature Extractor
 
-### Local Development
+``````
 
-```
 
-CBIR/#### PostgreSQL Database Setup
 
-├── docker-compose.yml              # Main Docker configuration
+------
 
-├── README.md                       # This fileBefore running the backend locally, you need a PostgreSQL database. You have two options:
+
+
+## 📦 Tech Stack## 📦 Tech Stack
+
+
+
+- **Frontend**: Next.js 14, React, TailwindCSS- **Frontend**: Next.js 14, React, TailwindCSS
+
+- **Backend**: FastAPI, Python 3.11- **Backend**: FastAPI, Python 3.11
+
+- **Search Engine**: Elasticsearch 8.11 with kNN plugin- **Search Engine**: Elasticsearch 8.11 with kNN plugin
+
+- **Deep Learning**: VGG16/VGG19 (TensorFlow 2.15)- **Deep Learning**: VGG16/VGG19 (TensorFlow 2.15)
+
+- **Data Pipeline**: Logstash 8.11- **Data Pipeline**: Logstash 8.11
+
+- **Deployment**: Docker Compose- **Deployment**: Docker Compose
+
+
+
+------
+
+
+
+## 🚀 Quick Start## 🚀 Quick Start (3 Steps)
+
+
+
+### Prerequisites### Prerequisites
+
+- Docker Desktop with 8GB+ RAM- Docker Desktop with 8GB+ RAM
+
+- 20GB+ disk space- 20GB+ disk space
+
+
+
+### Installation (3 Steps)### Installation
+
+
+
+```powershell```powershell
+
+# 1. Start Elasticsearch# 1. Start Elasticsearch
+
+docker-compose up -d elasticsearchdocker-compose up -d elasticsearch
+
+Start-Sleep -Seconds 60Start-Sleep -Seconds 60
+
+
+
+# 2. Create index and ingest sample data# 2. Create index and ingest sample data
+
+cd scriptscd scripts
+
+pip install -r requirements.txtpip install -r requirements.txt
+
+python elasticsearch_mapping.pypython elasticsearch_mapping.py
+
+python ingest_flickr_data.py --csv ..\data\csv\sample_photo_metadata.csv --limit 10python ingest_flickr_data.py --csv ..\data\csv\sample_photo_metadata.csv --limit 10
+
+
+
+# 3. Start application# 3. Start application
+
+cd ..cd ..
+
+docker-compose up -d backend frontenddocker-compose up -d backend frontend
+
+``````
+
+
+
+**Access:** http://localhost:3000**Access:** http://localhost:3000
+
+
+
+------
+
+
+
+## 📁 Project Structure## 📁 Project Structure
+
+
+
+``````
+
+CBIR/CBIR/
+
+├── docker-compose.yml              # Main Docker configuration├── docker-compose.yml              # Main Docker configuration
+
+├── README.md                       # This file├── README.md                       # This file
+
+││
+
+├── backend/                        # FastAPI backend├── backend/                        # FastAPI backend
+
+│   ├── main.py                    # API server│   ├── main.py                    # API server
+
+│   ├── Dockerfile                 # Backend container│   ├── Dockerfile                 # Backend container
+
+│   └── requirements.txt           # Python dependencies│   └── requirements.txt           # Python dependencies
+
+││
+
+├── frontend/                       # Next.js frontend├── frontend/                       # Next.js frontend
+
+│   ├── app/page.tsx               # Main search interface│   ├── app/page.tsx               # Main search interface
+
+│   ├── Dockerfile                 # Frontend container│   ├── Dockerfile                 # Frontend container
+
+│   └── package.json               # Node dependencies│   └── package.json               # Node dependencies
+
+││
+
+├── scripts/                        # Data ingestion pipeline├── scripts/                        # Data ingestion pipeline
+
+│   ├── elasticsearch_mapping.py   # Create ES index│   ├── elasticsearch_mapping.py   # Create ES index
+
+│   ├── vgg_extractor.py           # VGG feature extraction│   ├── vgg_extractor.py           # VGG feature extraction
+
+│   ├── ingest_flickr_data.py      # Complete ingestion pipeline│   ├── ingest_flickr_data.py      # Complete ingestion pipeline
+
+│   └── requirements.txt           # Python dependencies│   └── requirements.txt           # Python dependencies
+
+││
+
+├── logstash/                       # Logstash configuration├── logstash/                       # Logstash configuration
+
+│   └── pipeline/│   └── pipeline/
+
+│       └── flickr-csv.conf        # CSV parsing pipeline│       └── flickr-csv.conf        # CSV parsing pipeline
+
+││
+
+└── data/└── data/
+
+    ├── csv/                        # Place your CSV here    ├── csv/                        # Place your CSV here
+
+    │   └── sample_photo_metadata.csv    │   └── sample_photo_metadata.csv
+
+    └── temp/                       # Temporary images (auto-deleted)    └── temp/                       # Temporary images (auto-deleted)
+
+``````
+
+
+
+------
+
+
+
+## 🗂️ CSV Data Format## 🗂️ CSV Data Format
+
+
+
+Your CSV file must have these columns:Your CSV file must have these columns:
+
+
+
+```csv```csv
+
+id,userid,title,tags,latitude,longitude,views,date_taken,date_uploaded,accuracy,flickr_secret,flickr_server,flickr_farmid,userid,title,tags,latitude,longitude,views,date_taken,date_uploaded,accuracy,flickr_secret,flickr_server,flickr_farm
+
+5133463568,78697380@N00,"Tunisi 2010","{tunisia,carthage}",36.85,10.33,6,"2010-10-23 11:50:06","2010-10-31 21:42:28",14,002f695b15,1152,25133463568,78697380@N00,"Tunisi 2010","{tunisia,carthage}",36.85,10.33,6,"2010-10-23 11:50:06","2010-10-31 21:42:28",14,002f695b15,1152,2
+
+``````
+
+
+
+**Image URL Format:****Image URL Format:**
+
+``````
+
+http://farm{flickr_farm}.staticflickr.com/{flickr_server}/{id}_{flickr_secret}.jpghttp://farm{flickr_farm}.staticflickr.com/{flickr_server}/{id}_{flickr_secret}.jpg
+
+
+
+Example:Example:
+
+http://farm2.staticflickr.com/1152/5133463568_002f695b15.jpghttp://farm2.staticflickr.com/1152/5133463568_002f695b15.jpg
+
+``````
+
+
+
+------
+
+
+
+## 💾 Disk Space Management## 💾 Disk Space Management
+
+
+
+### Default Mode: Auto-Delete Images (90% Savings) ✅### Default Mode: Auto-Delete Images (90% Savings) ✅
+
+
+
+```powershell```powershell
+
+# Images are automatically deleted after feature extraction# Images are automatically deleted after feature extraction
+
+python ingest_flickr_data.py --csv photo_metadata.csvpython ingest_flickr_data.py --csv photo_metadata.csv
+
+
+
+# Storage for 1 million images:# Storage for 1 million images:
+
+# - Elasticsearch: 20 GB (features + metadata)# - Elasticsearch: 20 GB (features + metadata)
+
+# - Local images: 0 GB (deleted)# - Local images: 0 GB (deleted)
+
+# - Total: 20 GB# - Total: 20 GB
+
+``````
+
+
+
+### Optional: Keep Downloaded Images### Optional: Keep Downloaded Images
+
+
+
+```powershell```powershell
+
+# Use --keep-images flag to preserve images# Use --keep-images flag to preserve images
+
+python ingest_flickr_data.py --csv photo_metadata.csv --keep-imagespython ingest_flickr_data.py --csv photo_metadata.csv --keep-images
+
+
+
+# Storage for 1 million images:# Storage for 1 million images:
+
+# - Elasticsearch: 20 GB# - Elasticsearch: 20 GB
+
+# - Local images: 200 GB# - Local images: 200 GB
+
+# - Total: 220 GB# - Total: 220 GB
+
+``````
+
+
+
+**💡 Recommendation:** Use default mode (without `--keep-images`) to save 90% disk space!**💡 Recommendation:** Use default mode (without `--keep-images`) to save 90% disk space!
+
+
+
+------
+
+
+
+## 🔧 Configuration## 🔧 Configuration
+
+
+
+### Ingestion Parameters### Ingestion Parameters
+
+
+
+```powershell```powershell
+
+python scripts/ingest_flickr_data.py `python scripts/ingest_flickr_data.py `
+
+  --csv data/csv/photo_metadata.csv `    # CSV file path  --csv data/csv/photo_metadata.csv `    # CSV file path
+
+  --es-host localhost `                  # Elasticsearch host  --es-host localhost `                  # Elasticsearch host
+
+  --es-port 9200 `                       # Elasticsearch port  --es-port 9200 `                       # Elasticsearch port
+
+  --model vgg16 `                        # VGG model (vgg16 or vgg19)  --model vgg16 `                        # VGG model (vgg16 or vgg19)
+
+  --layer fc2 `                          # Feature layer (fc2 or block5_pool)  --layer fc2 `                          # Feature layer (fc2 or block5_pool)
+
+  --batch-size 100 `                     # Batch size  --batch-size 100 `                     # Batch size
+
+  --workers 4 `                          # Parallel workers  --workers 4 `                          # Parallel workers
+
+  --limit 1000 `                         # Limit images (optional)  --limit 1000 `                         # Limit images (optional)
+
+  --keep-images                          # Keep images (optional)  --keep-images                          # Keep images (optional)
+
+``````
+
+
+
+### VGG Model Options### VGG Model Options
+
+
+
+| Model | Layer | Dimensions | Speed | Use Case || Model | Layer | Dimensions | Speed | Use Case |
+
+|-------|-------|------------|-------|----------||-------|-------|------------|-------|----------|
+
+| VGG16 | fc2 | 4096 | Fast | General purpose || VGG16 | fc2 | 4096 | Fast | General purpose |
+
+| VGG19 | fc2 | 4096 | Slower | Higher accuracy || VGG19 | fc2 | 4096 | Slower | Higher accuracy |
+
+| VGG16 | block5_pool | 512 | Fastest | Large datasets || VGG16 | block5_pool | 512 | Fastest | Large datasets |
+
+
+
+------
+
+
+
+## 🐳 Docker Commands## 🐳 Docker Commands
+
+
+
+### Start Services### Start Services
+
+
+
+```powershell```powershell
+
+# Start all services# Start all services
+
+docker-compose up -ddocker-compose up -d
+
+
+
+# Start specific services# Start specific services
+
+docker-compose up -d elasticsearchdocker-compose up -d elasticsearch
+
+docker-compose up -d backend frontenddocker-compose up -d backend frontend
+
+
+
+# View logs# View logs
+
+docker-compose logs -f backenddocker-compose logs -f backend
+
+docker-compose logs -f elasticsearchdocker-compose logs -f elasticsearch
+
+``````
+
+
+
+### Stop Services### Stop Services
+
+
+
+```powershell```powershell
+
+# Stop all services# Stop all services
+
+docker-compose downdocker-compose down
+
+
+
+# Stop and remove volumes (⚠️ WARNING: deletes all data)# Stop and remove volumes (⚠️ WARNING: deletes all data)
+
+docker-compose down -vdocker-compose down -v
+
+``````
+
+
+
+### Check Status### Check Status
+
+
+
+```powershell```powershell
+
+# Check running containers# Check running containers
+
+docker-compose psdocker-compose ps
+
+
+
+# Check Elasticsearch health# Check Elasticsearch health
+
+curl http://localhost:9200/_cluster/healthcurl http://localhost:9200/_cluster/health
+
+
+
+# Check document count# Check document count
+
+curl http://localhost:9200/flickr_images/_countcurl http://localhost:9200/flickr_images/_count
+
+``````
+
+
+
+------
+
+
+
+## 🔍 API Examples## 🔍 API Examples
+
+
+
+### Visual Search (Similar Images)### Visual Search (Similar Images)
+
+
+
+```powershell```powershell
+
+# Using curl# Using curl
+
+curl -X POST http://localhost:8000/api/search/visual `curl -X POST http://localhost:8000/api/search/visual `
+
+  -F "image=@query.jpg" `  -F "image=@query.jpg" `
+
+  -F "top_k=10"  -F "top_k=10"
+
+``````
+
+
+
+### Text Search (Tags/Titles)### Text Search (Tags/Titles)
+
+
+
+```powershell```powershell
+
+curl -X POST http://localhost:8000/api/search/text `curl -X POST http://localhost:8000/api/search/text `
+
+  -H "Content-Type: application/json" `  -H "Content-Type: application/json" `
+
+  -d '{  -d '{
+
+    "query": "paris eiffel tower",    "query": "paris eiffel tower",
+
+    "top_k": 10    "top_k": 10
+
+  }'  }'
+
+``````
+
+
+
+### Geo Search (Location)### Geo Search (Location)
+
+
+
+```powershell```powershell
+
+curl -X POST http://localhost:8000/api/search/geo `curl -X POST http://localhost:8000/api/search/geo `
+
+  -H "Content-Type: application/json" `  -H "Content-Type: application/json" `
+
+  -d '{  -d '{
+
+    "lat": 48.858370,    "lat": 48.858370,
+
+    "lon": 2.294481,    "lon": 2.294481,
+
+    "radius": "10km",    "radius": "10km",
+
+    "top_k": 20    "top_k": 20
+
+  }'  }'
+
+``````
+
+
+
+### Hybrid Search (Combined)### Hybrid Search (Combined)
+
+
+
+```powershell```powershell
+
+curl -X POST http://localhost:8000/api/search/hybrid `curl -X POST http://localhost:8000/api/search/hybrid `
+
+  -F "image=@query.jpg" `  -F "image=@query.jpg" `
+
+  -F "query_text=paris" `  -F "query_text=paris" `
+
+  -F "lat=48.85" `  -F "lat=48.85" `
+
+  -F "lon=2.29" `  -F "lon=2.29" `
+
+  -F "radius=50km" `  -F "radius=50km" `
+
+  -F "top_k=10"  -F "top_k=10"
+
+``````
+
+
+
+------
+
+
+
+## 🛠️ Troubleshooting## 🛠️ Troubleshooting
+
+
+
+### ❌ Elasticsearch Won't Start### ❌ Elasticsearch Won't Start
+
+
+
+**Problem:** Docker container exits immediately**Problem:** Docker container exits immediately
+
+
+
+**Solution:****Solution:**
+
+```powershell```powershell
+
+# Increase Docker memory to 8GB minimum# Increase Docker memory to 8GB minimum
+
+# Docker Desktop → Settings → Resources → Memory → 8GB# Docker Desktop → Settings → Resources → Memory → 8GB
+
+
+
+# Clean restart# Clean restart
+
+docker-compose down -vdocker-compose down -v
+
+docker-compose up -d elasticsearchdocker-compose up -d elasticsearch
+
+``````
+
+
+
+------
+
+
+
+### ❌ Connection Refused### ❌ Connection Refused
+
+
+
+**Problem:** `Connection refused to localhost:9200`**Problem:** `Connection refused to localhost:9200`
+
+
+
+**Solution:****Solution:**
+
+```powershell```powershell
+
+# Wait for Elasticsearch (can take 60-120 seconds)# Wait for Elasticsearch (can take 60-120 seconds)
+
+Start-Sleep -Seconds 120Start-Sleep -Seconds 120
+
+
+
+# Check if running# Check if running
+
+docker ps | findstr elasticsearchdocker ps | findstr elasticsearch
+
+
+
+# Check logs for errors# Check logs for errors
+
+docker-compose logs elasticsearchdocker-compose logs elasticsearch
+
+``````
+
+
+
+------
+
+
+
+### ❌ Out of Memory During Ingestion### ❌ Out of Memory During Ingestion
+
+
+
+**Problem:** Python process killed or crashes**Problem:** Python process killed or crashes
+
+
+
+**Solution:****Solution:**
+
+```powershell```powershell
+
+# Reduce batch size and workers# Reduce batch size and workers
+
+python ingest_flickr_data.py `python ingest_flickr_data.py `
+
+  --csv data.csv `  --csv data.csv `
+
+  --batch-size 20 `  --batch-size 20 `
+
+  --workers 2  --workers 2
+
+``````
+
+
+
+------
+
+
+
+### ❌ Images Not Downloading### ❌ Images Not Downloading
+
+
+
+**Problem:** Many 404 errors during download**Problem:** Many 404 errors during download
+
+
+
+**Solution:****Solution:**
+
+```powershell```powershell
+
+# Some Flickr images may be deleted (normal, <10% error rate is OK)# Some Flickr images may be deleted (normal, <10% error rate is OK)
+
+
+
+# Verify CSV format# Verify CSV format
+
+Get-Content data\csv\photo_metadata.csv -Head 5Get-Content data\csv\photo_metadata.csv -Head 5
+
+
+
+# Check flickr_secret, flickr_server, flickr_farm columns exist# Check flickr_secret, flickr_server, flickr_farm columns exist
+
+``````
+
+
+
+------
+
+
+
+## 📈 Performance## 📈 Performance
+
+
+
+### Processing Speed### Processing Speed
+
+
+
+| Hardware | Speed | Time for 10K images || Hardware | Speed | Time for 10K images |
+
+|----------|-------|---------------------||----------|-------|---------------------|
+
+| CPU (8 cores) | ~2 images/sec | ~80 minutes || CPU (8 cores) | ~2 images/sec | ~80 minutes |
+
+| GPU (NVIDIA) | ~20 images/sec | ~8 minutes || GPU (NVIDIA) | ~20 images/sec | ~8 minutes |
+
+
+
+### Search Performance### Search Performance
+
+
+
+- **kNN Search**: < 100ms for top-10 results- **kNN Search**: < 100ms for top-10 results
+
+- **Text Search**: < 50ms  - **Text Search**: < 50ms  
+
+- **Geo Search**: < 75ms- **Geo Search**: < 75ms
+
+- **Hybrid Search**: < 150ms- **Hybrid Search**: < 150ms
+
+
+
+### Storage Requirements### Storage Requirements
+
+
+
+| Images | Features Only | With Images | Savings || Images | Features Only | With Images | Savings |
+
+|--------|--------------|-------------|---------||--------|--------------|-------------|---------|
+
+| 10K | 200 MB | 2 GB | 90% || 10K | 200 MB | 2 GB | 90% |
+
+| 100K | 2 GB | 20 GB | 90% || 100K | 2 GB | 20 GB | 90% |
+
+| 1M | 20 GB | 220 GB | 90% || 1M | 20 GB | 220 GB | 90% |
+
+
+
+### Optimization Tips### Optimization Tips
+
+
+
+```powershell```powershell
+
+# Use RAM disk for ultra-fast processing (Windows)# Use RAM disk for ultra-fast processing (Windows)
+
+python ingest_flickr_data.py `python ingest_flickr_data.py `
+
+  --csv data.csv `  --csv data.csv `
+
+  --temp-dir R:\cbir_temp  --temp-dir R:\cbir_temp
+
+
+
+# Increase batch size (requires more RAM)# Increase batch size (requires more RAM)
+
+python ingest_flickr_data.py `python ingest_flickr_data.py `
+
+  --csv data.csv `  --csv data.csv `
+
+  --batch-size 500 `  --batch-size 500 `
+
+  --workers 16  --workers 16
+
+``````
+
+
+
+------
+
+
+
+## 🌐 Service URLs## 🌐 Service URLs
+
+
+
+| Service | URL | Description || Service | URL | Description |
+
+|---------|-----|-------------||---------|-----|-------------|
+
+| **Frontend** | http://localhost:3000 | Search interface || **Frontend** | http://localhost:3000 | Search interface |
+
+| **Backend API** | http://localhost:8000 | REST API || **Backend API** | http://localhost:8000 | REST API |
+
+| **API Docs** | http://localhost:8000/docs | Swagger UI || **API Docs** | http://localhost:8000/docs | Swagger UI |
+
+| **Elasticsearch** | http://localhost:9200 | Search engine || **Elasticsearch** | http://localhost:9200 | Search engine |
+
+| **Kibana** (optional) | http://localhost:5601 | Analytics dashboard || **Kibana** (optional) | http://localhost:5601 | Analytics dashboard |
+
+
+
+------
+
+
+
+## 📋 System Requirements## 📋 System Requirements
+
+
+
+### Minimum Requirements### Minimum Requirements
+
+- **OS**: Windows 10+, Linux, or macOS- **OS**: Windows 10+, Linux, or macOS
+
+- **Docker Desktop**: 20+- **Docker Desktop**: 20+
+
+- **RAM**: 8GB- **RAM**: 8GB
+
+- **Disk**: 20GB free- **Disk**: 20GB free
+
+- **CPU**: 4 cores- **CPU**: 4 cores
+
+
+
+### Recommended for Production### Recommended for Production
+
+- **RAM**: 16GB+- **RAM**: 16GB+
+
+- **Disk**: 100GB+ SSD- **Disk**: 100GB+ SSD
+
+- **CPU**: 8+ cores- **CPU**: 8+ cores
+
+- **GPU**: NVIDIA GPU with CUDA (optional, 10x faster)- **GPU**: NVIDIA GPU with CUDA (optional, 10x faster)
+
+
+
+### For Development### For Development
+
+- **Python**: 3.11+- **Python**: 3.11+
+
+- **Node.js**: 18+- **Node.js**: 18+
+
+- **Git**: Latest- **Git**: Latest
+
+
+
+------
+
+
+
+## 🎯 Use Cases## 🎯 Use Cases
+
+
+
+✅ **E-commerce**: Visual product search  ✅ **E-commerce**: Visual product search  
+
+✅ **Media Libraries**: Find similar photos/videos  ✅ **Media Libraries**: Find similar photos/videos  
+
+✅ **Content Moderation**: Duplicate detection  ✅ **Content Moderation**: Duplicate detection  
+
+✅ **Research**: Computer vision experiments  ✅ **Research**: Computer vision experiments  
+
+✅ **Travel Apps**: Geo-tagged image discovery  ✅ **Travel Apps**: Geo-tagged image discovery  
+
+✅ **Social Media**: Image recommendation systems✅ **Social Media**: Image recommendation systems
+
+
+
+------
+
+
+
+## 📚 Documentation## 📚 Documentation
+
+
+
+- **API Documentation**: http://localhost:8000/docs (when running)- **API Documentation**: http://localhost:8000/docs (when running)
+
+- **Elasticsearch kNN**: https://www.elastic.co/guide/en/elasticsearch/reference/current/knn-search.html- **Elasticsearch kNN**: https://www.elastic.co/guide/en/elasticsearch/reference/current/knn-search.html
+
+- **VGG Networks**: https://arxiv.org/abs/1409.1556- **VGG Networks**: https://arxiv.org/abs/1409.1556
+
+- **TensorFlow Keras**: https://www.tensorflow.org/api_docs/python/tf/keras/applications- **TensorFlow Keras**: https://www.tensorflow.org/api_docs/python/tf/keras/applications
+
+
+
+------
+
+
+
+## ✅ Quick Test## ✅ Quick Test
+
+
+
+Test with sample data (5 minutes):Test with sample data (5 minutes):
+
+
+
+```powershell```powershell
+
+# 1. Start Elasticsearch# 1. Start Elasticsearch
+
+docker-compose up -d elasticsearchdocker-compose up -d elasticsearch
+
+Start-Sleep -Seconds 60Start-Sleep -Seconds 60
+
+
+
+# 2. Create index & ingest 10 images# 2. Create index & ingest 10 images
+
+cd scriptscd scripts
+
+pip install -r requirements.txtpip install -r requirements.txt
+
+python elasticsearch_mapping.pypython elasticsearch_mapping.py
+
+python ingest_flickr_data.py --csv ..\data\csv\sample_photo_metadata.csv --limit 10python ingest_flickr_data.py --csv ..\data\csv\sample_photo_metadata.csv --limit 10
+
+
+
+# 3. Start application# 3. Start application
+
+cd ..cd ..
+
+docker-compose up -d backend frontenddocker-compose up -d backend frontend
+
+
+
+# 4. Open browser# 4. Open browser
+
+Start-Process http://localhost:3000Start-Process http://localhost:3000
+
+``````
+
+
+
+✨ **Done!** Upload an image and try searching.✨ **Done!** Upload an image and try searching.
+
+
+
+------
+
+
+
+## 🤝 Contributing## 🤝 Contributing
+
+
+
+Contributions are welcome!Contributions are welcome!
+
+
+
+1. Fork the repository1. Fork the repository
+
+2. Create a feature branch (`git checkout -b feature/amazing-feature`)2. Create a feature branch (`git checkout -b feature/amazing-feature`)
+
+3. Commit your changes (`git commit -m 'Add amazing feature'`)3. Commit your changes (`git commit -m 'Add amazing feature'`)
+
+4. Push to the branch (`git push origin feature/amazing-feature`)4. Push to the branch (`git push origin feature/amazing-feature`)
+
+5. Open a Pull Request5. Open a Pull Request
+
+
+
+------
+
+
+
+## 📄 License## 📄 License
+
+
+
+MIT License - See LICENSE file for detailsMIT License - See LICENSE file for details
+
+
+
+------
+
+
+
+## 🆘 Need Help?## 🆘 Need Help?
+
+
+
+**Common Solutions:****Common Solutions:**
+
+1. ❌ **Elasticsearch won't start** → Increase Docker RAM to 8GB1. ❌ **Elasticsearch won't start** → Increase Docker RAM to 8GB
+
+2. ❌ **Connection refused** → Wait 60-120 seconds after starting2. ❌ **Connection refused** → Wait 60-120 seconds after starting
+
+3. ❌ **Out of memory** → Reduce `--batch-size` to 20-503. ❌ **Out of memory** → Reduce `--batch-size` to 20-50
+
+4. ❌ **Images fail to download** → Check CSV format (< 10% errors OK)4. ❌ **Images fail to download** → Check CSV format (< 10% errors OK)
+
+
+
+**Debugging:****Debugging:**
+
+```powershell```powershell
+
+# View all logs# View all logs
+
+docker-compose logs -fdocker-compose logs -f
+
+
+
+# Check Elasticsearch specifically# Check Elasticsearch specifically
+
+docker-compose logs elasticsearch | Select-String "error"docker-compose logs elasticsearch | Select-String "error"
+
+
+
+# Test connection# Test connection
+
+curl http://localhost:9200curl http://localhost:9200
+
+``````
+
+
+
+------
+
+
+
+## 👨‍💻 Author## 👨‍💻 Author
+
+
+
+**Ahmed Guermazi****Ahmed Guermazi**
+
+
+
+------
+
+
+
+## 🏷️ Version## 🏷️ Version
+
+
+
+**Version**: 2.0.0 (Elasticsearch + VGG)  **Version**: 2.0.0 (Elasticsearch + VGG)  
+
+**Last Updated**: October 2025**Last Updated**: October 2025
+
+
+
+------
+
+
+
+**Built with ❤️ for visual search and content discovery****Built with ❤️ for visual search and content discovery**
+
 
 │
 
