@@ -1,5 +1,3 @@
-version: '3.8'
-
 services:
   # Elasticsearch - Search Engine & Database
   elasticsearch:
@@ -78,7 +76,7 @@ services:
   backend:
     build:
       context: ./backend
-      dockerfile: Dockerfile.es
+      dockerfile: Dockerfile
     container_name: cbir_backend
     environment:
       - ELASTICSEARCH_HOST=elasticsearch

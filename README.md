@@ -10,6 +10,10 @@
 - **Text Search**: Search by tags, titles, and descriptions
 - **Geo Search**: Find images by location (latitude/longitude)
 - **Hybrid Search**: Combine visual + textual + geo queries
+- **Interactive Map**: View search results on an interactive map with OpenStreetMap
+- **Rich Metadata**: Display tags, views, dates, and location for each image
+- **Advanced Filters**: Filter by tags, date range, and minimum view count
+- **Multiple Views**: Switch between grid and map visualization
 - **90% Disk Savings**: Auto-delete images after feature extraction
 - **Scalable**: Handles millions of images with Elasticsearch kNN
 
@@ -27,7 +31,7 @@ Frontend (Next.js)  Backend (FastAPI)  Elasticsearch + kNN
 
 ##  Tech Stack
 
-- **Frontend**: Next.js 14, React, TailwindCSS
+- **Frontend**: Next.js 14, React, TailwindCSS, Leaflet (Interactive Maps)
 - **Backend**: FastAPI, Python 3.11
 - **Search Engine**: Elasticsearch 8.11 with kNN plugin
 - **Deep Learning**: VGG16/VGG19 (TensorFlow 2.15)
@@ -61,6 +65,58 @@ docker-compose up -d backend frontend
 ```
 
 **Access:** http://localhost:3000
+
+---
+
+##  Frontend Features
+
+### Search Modes
+
+1. **Text Search**
+   - Search by tags: `sunset, beach, ocean`
+   - Search by title: `Golden Gate Bridge`
+   - Apply filters: date range, minimum views, specific tags
+
+2. **Visual Search (VGG)**
+   - Upload an image
+   - System extracts VGG deep features
+   - Finds visually similar images
+   - Results ranked by similarity score
+
+3. **Hybrid Search**
+   - Upload image + enter text
+   - Combines visual similarity + text relevance
+   - Best of both worlds
+
+### View Modes
+
+- **Grid View**: Traditional card layout with rich metadata
+  - Image preview with hover zoom
+  - Tags, views, and dates
+  - Similarity scores
+  - Location indicators
+
+- **Map View**: Interactive OpenStreetMap visualization
+  - Images displayed at their geographic coordinates
+  - Click markers to preview images
+  - Auto-zoom to fit all results
+  - Use any image as new search query
+
+### Filters
+
+- **Tags**: Add multiple tags to refine results
+- **Date Range**: Filter by date taken (from/to dates)
+- **Minimum Views**: Show only popular images (e.g., views >= 1000)
+
+### Metadata Display
+
+Each image shows:
+- Title
+- Tags (top 3 visible)
+- View count (formatted: 1K, 1M)
+- Date taken
+- Geographic coordinates (if available)
+- Similarity score (percentage)
 
 ---
 
