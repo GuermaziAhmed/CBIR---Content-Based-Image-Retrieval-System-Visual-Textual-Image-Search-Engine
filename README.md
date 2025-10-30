@@ -8,24 +8,27 @@
 
 ### Core Features
 - **Visual Search**: Upload an image and find similar images using VGG16/VGG19 deep learning
-- **Multi-Descriptor Search**: Combine 5 visual descriptors (VGG, Color, LBP, HOG, MPEG-7) for 20-30% better accuracy
-- **Individual Match Scores**: See how well each descriptor matches (VGG 82%, Color 91%, LBP 65%, etc.)
-- **Text Search**: Search by tags, titles, and descriptions
-- **Geo Search**: Find images by location (latitude/longitude)
-- **Hybrid Search**: Combine visual + textual + geo queries
+- **Multi-Descriptor Search**: Combine 6 visual descriptors (VGG, Color, LBP, HOG, Edge Histogram, SIFT) for superior accuracy
+- **Individual Match Scores**: See how well each descriptor matches (VGG 82%, Color 91%, LBP 65%, HOG 73%, Edge 78%, SIFT 68%)
+- **Text Search**: Fuzzy text search with typo tolerance (e.g., "mooon" finds "moon")
+- **Hybrid Search**: Combine visual + text queries with automatic VGG prioritization
+- **Smart Filtering**: Automatically excludes broken images and failed downloads
 
 ### User Interface
-- **Interactive Map**: View search results on an interactive map with OpenStreetMap
-- **Rich Metadata**: Display tags, views, dates, and location for each image
-- **Advanced Filters**: Filter by tags, date range, and minimum view count
-- **Multiple Views**: Switch between grid and map visualization
-- **Progress Bars**: Visual representation of each descriptor's match percentage
+- **Clean Design**: Simplified interface with descriptor-based controls
+- **Rich Metadata**: Display tags, views, dates, and similarity scores
+- **Descriptor Controls**: Enable/disable individual descriptors (VGG, Color, LBP, HOG, Edge, SIFT)
+- **Real-time Results**: Shows query timing and result count
+- **Tag Visualization**: Colored badges for better tag readability
 
 ### Technical Features
 - **90% Disk Savings**: Auto-delete images after feature extraction
 - **Scalable**: Handles millions of images with Elasticsearch kNN
-- **Customizable Weights**: Adjust importance of each visual descriptor
-- **Real-time Processing**: Extract features on-the-fly for uploaded images
+- **VGG Auto-Prioritization**: Automatically gives VGG 50% weight when combined with other descriptors
+- **Resumable Processing**: Use --offset and --limit for interruptible large-scale ingestion
+- **Parallel Processing**: Multi-worker support for 8-20x faster descriptor extraction
+- **GPU Acceleration**: TensorFlow auto-detects GPU for 10-50x faster processing
+- **Fuzzy Text Search**: 3-strategy matching (exact, fuzzy AUTO with 1-2 typos, phrase with slop)
 
 ---
 
@@ -41,19 +44,20 @@ Frontend (Next.js)  Backend (FastAPI)  Elasticsearch + kNN
 
 ##  Tech Stack
 
-- **Frontend**: Next.js 14, React, TailwindCSS, Leaflet (Interactive Maps)
+- **Frontend**: Next.js 14, React, TailwindCSS
 - **Backend**: FastAPI, Python 3.11
 - **Search Engine**: Elasticsearch 8.11 with kNN plugin (cosine similarity)
-- **Deep Learning**: VGG16/VGG19 (TensorFlow 2.15)
-- **Computer Vision**: OpenCV, scikit-image (LBP, HOG descriptors)
-- **Data Pipeline**: Logstash 8.11, Pandas
+- **Deep Learning**: VGG16/VGG19 (TensorFlow 2.15, GPU support)
+- **Computer Vision**: OpenCV, scikit-image
+- **Data Pipeline**: Pandas, tqdm
 - **Deployment**: Docker Compose
 - **Visual Descriptors**: 
-  - VGG16/19 (4096-dim deep features)
-  - Color Histogram (24-dim RGB distribution)
-  - LBP (10-dim texture patterns)
-  - HOG (81-dim shape gradients)
-  - MPEG-7 (64-dim color + edge features)
+  - **VGG16/19** (4096-dim deep features, L2 normalized)
+  - **Color Histogram** (24-dim RGB distribution, L1 normalized for probability)
+  - **LBP** (10-dim uniform texture patterns, L2 normalized)
+  - **HOG** (81-dim shape gradients, 9 orientations, L2 normalized)
+  - **Edge Histogram** (64-dim MPEG-7 style edge distribution, L2 normalized)
+  - **SIFT** (128-dim keypoint features, RootSIFT + mean+std pooling)
 
 ---
 
@@ -70,70 +74,84 @@ Frontend (Next.js)  Backend (FastAPI)  Elasticsearch + kNN
 docker-compose up -d elasticsearch
 Start-Sleep -Seconds 60
 
-# 2. Create index and ingest sample data
+# 2. Create index and ingest data (with GPU acceleration if available)
 cd scripts
 pip install -r requirements.txt
 python elasticsearch_mapping.py
-python ingest_flickr_data.py --csv ..\data\csv\sample_photo_metadata.csv --limit 10
 
-# 3. Start application
+# Ingest first 1 million images with resumable processing
+python ingest_flickr_data.py `
+  --csv ..\data\csv\photo_metadata.csv `
+  --limit 1000000 `
+  --batch-size 2000 `
+  --workers 24
+
+# 3. Add all descriptors (Color, LBP, HOG, Edge, SIFT) with parallel processing
 cd ..
+docker-compose exec backend python scripts/add_all_descriptors.py `
+  --host elasticsearch `
+  --workers 16 `
+  --batch-size 50
+
+# 4. Start application
 docker-compose up -d backend frontend
 ```
 
 **Access:** http://localhost:3000
 
+**Resume if interrupted:**
+```powershell
+# Resume ingestion from document 500,000
+python ingest_flickr_data.py --offset 500000 --limit 500000
+
+# Resume descriptor extraction from document 500,000
+docker-compose exec backend python scripts/add_all_descriptors.py `
+  --host elasticsearch `
+  --offset 500000 `
+  --workers 16
+```
+
 ---
 
-##  Frontend Features
+###  Frontend Features
 
 ### Search Modes
 
-1. **Text Search**
+1. **Text Search** (with Fuzzy Matching)
    - Search by tags: `sunset, beach, ocean`
-   - Search by title: `Golden Gate Bridge`
-   - Apply filters: date range, minimum views, specific tags
+   - Typo tolerance: `mooon` finds `moon`, `paryis` finds `paris`
+   - 3-strategy matching: exact, fuzzy (AUTO 1-2 typos), phrase (slop=2)
 
-2. **Visual Search (VGG)**
+2. **Visual Search** (Multi-Descriptor)
    - Upload an image
-   - System extracts VGG deep features
-   - Finds visually similar images
-   - Results ranked by similarity score
+   - Enable/disable individual descriptors (VGG, Color, LBP, HOG, Edge, SIFT)
+   - Automatic VGG prioritization (50% weight when combined)
+   - See individual match scores for each descriptor
+   - Results show complete similarity breakdown
 
 3. **Hybrid Search**
    - Upload image + enter text
-   - Combines visual similarity + text relevance
-   - Best of both worlds
+   - Combines visual similarity (50%) + text relevance (50%)
+   - VGG gets 50% of visual score, other descriptors share remaining 50%
 
-### View Modes
+### Descriptor Controls
 
-- **Grid View**: Traditional card layout with rich metadata
-  - Image preview with hover zoom
-  - Tags, views, and dates
-  - Similarity scores
-  - Location indicators
+Enable/disable any combination of 6 descriptors:
+- **VGG** 🧠: Deep semantic similarity
+- **Color** 🎨: RGB color distribution matching  
+- **LBP** 📊: Texture pattern similarity
+- **HOG** ⚡: Shape and edge orientation
+- **Edge** 🎬: MPEG-7 edge histogram
+- **SIFT** 🔍: Keypoint-based local features
 
-- **Map View**: Interactive OpenStreetMap visualization
-  - Images displayed at their geographic coordinates
-  - Click markers to preview images
-  - Auto-zoom to fit all results
-  - Use any image as new search query
-
-### Filters
-
-- **Tags**: Add multiple tags to refine results
-- **Date Range**: Filter by date taken (from/to dates)
-- **Minimum Views**: Show only popular images (e.g., views >= 1000)
-
-### Metadata Display
+### Result Display
 
 Each image shows:
-- Title
-- Tags (top 3 visible)
+- Title and tags (colored badges)
+- Similarity scores for each enabled descriptor
+- Global match percentage (average of all descriptors)
 - View count (formatted: 1K, 1M)
-- Date taken
-- Geographic coordinates (if available)
-- Similarity score (percentage)
+- Query timing (e.g., "150 results in 245ms")
 
 ---
 
@@ -232,19 +250,34 @@ python scripts/ingest_flickr_data.py `
   --es-port 9200 `                       # Elasticsearch port
   --model vgg16 `                        # VGG model (vgg16 or vgg19)
   --layer fc2 `                          # Feature layer (fc2 or block5_pool)
-  --batch-size 100 `                     # Batch size
-  --workers 4 `                          # Parallel workers
-  --limit 1000 `                         # Limit images (optional)
-  --keep-images                          # Keep images (optional)
+  --batch-size 2000 `                    # Batch size (GPU: 2000-4000, CPU: 1000-1500)
+  --workers 24 `                         # Parallel workers (GPU: 24-32, CPU: 16)
+  --limit 1000000 `                      # Limit images (optional)
+  --offset 0 `                           # Skip first N images (for resuming)
+  --keep-images                          # Keep images (optional, uses 10x more disk)
+```
+
+### Descriptor Extraction Parameters
+
+```powershell
+docker-compose exec backend python scripts/add_all_descriptors.py `
+  --host elasticsearch `                 # Elasticsearch host
+  --port 9200 `                          # Elasticsearch port
+  --index flickr_images `                # Index name
+  --batch-size 50 `                      # Documents per scroll batch
+  --workers 16 `                         # Parallel workers (8-24 recommended)
+  --offset 0 `                           # Skip first N documents (for resuming)
+  --limit 1000000 `                      # Max documents to process (optional)
+  --force                                # Reprocess all (default: skip existing)
 ```
 
 ### VGG Model Options
 
 | Model | Layer | Dimensions | Speed | Use Case |
 |-------|-------|------------|-------|----------|
-| VGG16 | fc2 | 4096 | Fast | General purpose |
+| VGG16 | fc2 | 4096 | Fast | General purpose (recommended) |
 | VGG19 | fc2 | 4096 | Slower | Higher accuracy |
-| VGG16 | block5_pool | 512 | Fastest | Large datasets |
+| VGG16 | block5_pool | 512 | Fastest | Large datasets (less accurate) |
 
 ---
 
@@ -408,19 +441,33 @@ Get-Content data\csv\photo_metadata.csv -Head 5
 
 ##  Performance
 
-### Processing Speed
+### Processing Speed (VGG Extraction)
 
-| Hardware | Speed | Time for 10K images |
-|----------|-------|---------------------|
-| CPU (8 cores) | ~2 images/sec | ~80 minutes |
-| GPU (NVIDIA) | ~20 images/sec | ~8 minutes |
+| Hardware | Speed | Time for 10K images | Time for 1M images |
+|----------|-------|---------------------|---------------------|
+| CPU (8 cores) | ~30-50 images/sec | ~3-5 hours | ~6-9 days |
+| GPU (NVIDIA) | ~200-1500 images/sec | ~7-30 minutes | ~11-80 hours |
+
+**GPU Optimization:**
+- Batch size: 2000-4000 (GPU), 1000-1500 (CPU)
+- Workers: 24-32 (GPU), 16 (CPU)
+- Expected speedup: 10-50x over CPU
+
+### Descriptor Extraction Speed (5 CV descriptors)
+
+| Configuration | Speed | Time for 100K images |
+|--------------|-------|---------------------|
+| 1 worker (sequential) | ~5-10 images/min | ~170-330 hours |
+| 8 workers (default) | ~40-80 images/min | ~20-40 hours |
+| 16 workers (high) | ~80-150 images/min | ~11-20 hours |
+| 24 workers (max) | ~120-200 images/min | ~8-14 hours |
 
 ### Search Performance
 
-- **kNN Search**: < 100ms for top-10 results
-- **Text Search**: < 50ms  
-- **Geo Search**: < 75ms
-- **Hybrid Search**: < 150ms
+- **Multi-Descriptor kNN**: < 300ms for top-50 results (6 descriptors)
+- **Text Search (Fuzzy)**: < 100ms  
+- **Hybrid Search**: < 400ms
+- **Single Descriptor**: < 100ms
 
 ### Storage Requirements
 
@@ -429,6 +476,16 @@ Get-Content data\csv\photo_metadata.csv -Head 5
 | 10K | 200 MB | 2 GB | 90% |
 | 100K | 2 GB | 20 GB | 90% |
 | 1M | 20 GB | 220 GB | 90% |
+
+**Feature sizes per image:**
+- VGG16: 16 KB (4096 × 4 bytes)
+- Color: 96 bytes (24 × 4 bytes)
+- LBP: 40 bytes (10 × 4 bytes)
+- HOG: 324 bytes (81 × 4 bytes)
+- Edge: 256 bytes (64 × 4 bytes)
+- SIFT: 512 bytes (128 × 4 bytes)
+- Metadata: ~2 KB
+- **Total**: ~19 KB per image
 
 ### Optimization Tips
 
@@ -503,56 +560,56 @@ python ingest_flickr_data.py `
 
 ##  Quick Test
 
-Test with sample data (5 minutes):
+Test with real data (1M images):
 
 ```powershell
 # 1. Start Elasticsearch
 docker-compose up -d elasticsearch
 Start-Sleep -Seconds 60
 
-# 2. Create index & ingest 10 images
+# 2. Create index & ingest 1M images (with GPU: ~1-2 hours, CPU: ~6-9 hours)
 cd scripts
 pip install -r requirements.txt
 python elasticsearch_mapping.py
-python ingest_flickr_data.py --csv ..\data\csv\sample_photo_metadata.csv --limit 10
 
-# 3. Start application
+python ingest_flickr_data.py `
+  --csv ..\data\csv\photo_metadata.csv `
+  --limit 1000000 `
+  --batch-size 2000 `
+  --workers 24
+
+# 3. Add all descriptors (with 16 workers: ~11-20 hours)
 cd ..
+docker-compose exec backend python scripts/add_all_descriptors.py `
+  --host elasticsearch `
+  --workers 16 `
+  --batch-size 50 `
+  --limit 1000000
+
+# 4. Verify descriptors
+docker-compose exec backend python scripts/verify_descriptors_simple.py
+
+# 5. Start application
 docker-compose up -d backend frontend
 
-# 4. Open browser
+# 6. Open browser
 Start-Process http://localhost:3000
 ```
 
- **Done!** Upload an image and try searching.
+ **Done!** Upload an image and see all 6 descriptor scores.
 
-### Enable Multi-Descriptor Search (Optional - Better Accuracy)
-
-For 20-30% better search accuracy, add all visual descriptors to your images:
+### If Processing Gets Interrupted
 
 ```powershell
-# 1. Rebuild backend with new dependencies (scikit-image, tqdm, opencv)
-docker-compose stop backend
-docker-compose build backend
-docker-compose up -d backend
+# Resume VGG ingestion from 500K
+python ingest_flickr_data.py --offset 500000 --limit 500000
 
-# 2. Copy re-indexing script
-docker-compose exec backend mkdir -p /app/scripts
-docker-compose cp scripts\add_all_descriptors.py backend:/app/scripts/
-
-# 3. Add descriptors to all images (takes 20-40 min for 160 images)
-docker-compose exec backend python scripts/add_all_descriptors.py --host elasticsearch --batch-size 10
+# Resume descriptor extraction from 500K
+docker-compose exec backend python scripts/add_all_descriptors.py `
+  --host elasticsearch `
+  --offset 500000 `
+  --workers 16
 ```
-
-**Result:** Images now show individual match scores:
-- 🧠 VGG: 82.5% (semantic similarity)
-- 🎨 Color: 91.2% (color matching)
-- 📊 LBP: 65.3% (texture)
-- ⚡ HOG: 73.8% (shape)
-- 🎬 MPEG-7: 78.1% (balanced)
-- **Global Match: 78.2%**
-
-See `SETUP_GUIDE.md` Step 11 for complete instructions.
 
 ---
 
@@ -579,10 +636,21 @@ MIT License - See LICENSE file for details
 **Common Solutions:**
 1. 🐘 **Elasticsearch won't start** → Increase Docker RAM to 8GB
 2. 🔌 **Connection refused** → Wait 60-120 seconds after starting
-3. 💾 **Out of memory** → Reduce `--batch-size` to 20-50
-4. 📷 **Images fail to download** → Check CSV format (< 10% errors OK)
-5. 📊 **Descriptor scores not showing** → Run multi-descriptor setup (see above)
-6. 🐍 **Module not found (skimage)** → `docker-compose exec backend pip install scikit-image opencv-python-headless`
+3. 💾 **Out of memory** → Reduce `--batch-size` to 1000 and `--workers` to 16
+4. 📷 **Images fail to download** → Check CSV format (< 10% errors OK, failed downloads are automatically filtered)
+5. 📊 **Only VGG scores showing** → Run `add_all_descriptors.py` to extract other descriptors
+6. ⏸️ **Processing interrupted** → Use `--offset` to resume from where you left off
+7. 🐍 **Module not found** → `docker-compose build backend` to rebuild with all dependencies
+
+**Verify Your Setup:**
+```powershell
+# Check how many documents have all 6 descriptors
+docker-compose exec backend python scripts/verify_descriptors_simple.py
+
+# Expected output:
+# ✅ Documents with ALL descriptors: 920,503 (66.67%)
+# ❌ Documents MISSING descriptors: 46,252 (33.33%)
+```
 
 **Debugging:**
 ```powershell
@@ -600,14 +668,25 @@ curl http://localhost:9200           # Elasticsearch
 curl http://localhost:8000/health    # Backend
 curl http://localhost:3000           # Frontend
 
-# Verify multi-descriptor setup
-docker-compose exec backend python scripts/add_all_descriptors.py --verify-only --host elasticsearch
+# Count documents
+curl http://localhost:9200/flickr_images/_count
+
+# Check index mapping
+curl http://localhost:9200/flickr_images/_mapping
 ```
 
-**Documentation:**
-- `SETUP_GUIDE.md` - Complete step-by-step setup instructions
-- `SETUP_GUIDE.md#step-11` - Multi-descriptor search setup
-- http://localhost:8000/docs - API documentation (Swagger UI)
+**Performance Tuning:**
+```powershell
+# GPU users: Maximize throughput
+python ingest_flickr_data.py --batch-size 4000 --workers 32
+
+# Limited RAM: Reduce memory usage
+python ingest_flickr_data.py --batch-size 1000 --workers 16
+docker-compose exec backend python scripts/add_all_descriptors.py --workers 8 --batch-size 20
+
+# Resume from specific point
+python ingest_flickr_data.py --offset 500000 --limit 500000
+```
 
 ---
 
@@ -619,8 +698,21 @@ docker-compose exec backend python scripts/add_all_descriptors.py --verify-only 
 
 ##  Version
 
-**Version**: 2.0.0 (Elasticsearch + VGG)  
+**Version**: 3.0.0 (Multi-Descriptor + Fuzzy Search + Resumable Processing)  
 **Last Updated**: October 2025
+
+**Major Changes in v3.0:**
+- ✅ Added 6-descriptor support (VGG, Color, LBP, HOG, Edge Histogram, SIFT)
+- ✅ Fuzzy text search with typo tolerance (AUTO fuzziness)
+- ✅ Automatic VGG prioritization (50% weight when combined)
+- ✅ Resumable processing with --offset and --limit
+- ✅ Multi-worker parallel descriptor extraction (8-20x faster)
+- ✅ GPU acceleration for VGG extraction
+- ✅ Smart filtering (broken images, failed downloads)
+- ✅ Complete descriptor score calculation for all results
+- ✅ Simplified UI (removed map view, cleaned controls)
+- ✅ Fixed Elasticsearch score conversion (cosine formula)
+- ✅ RootSIFT normalization + mean+std pooling
 
 ---
 
