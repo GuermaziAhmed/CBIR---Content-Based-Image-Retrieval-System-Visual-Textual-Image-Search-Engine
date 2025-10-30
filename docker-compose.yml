@@ -85,12 +85,14 @@ services:
       - IMAGE_DIR=/data/images
       - VGG_MODEL=vgg16  # or vgg19
       - VGG_LAYER=fc2    # Feature layer
+      - KERAS_HOME=/root/.keras  # Keras cache directory
     ports:
       - "8000:8000"
     volumes:
       - ./data/images:/data/images
       - ./data/models:/data/models  # Pre-trained VGG weights
       - ./backend:/app
+      - keras_cache:/root/.keras  # Persist Keras model cache
     depends_on:
       elasticsearch:
         condition: service_healthy
@@ -133,11 +135,14 @@ services:
       - DOWNLOAD_IMAGES=true
       - EXTRACT_FEATURES=true
       - BATCH_SIZE=100
+      - KERAS_HOME=/root/.keras  # Keras cache directory
+      - TF_CPP_MIN_LOG_LEVEL=2  # Reduce TensorFlow logging
     volumes:
       - ./data/csv:/data/csv
       - ./data/images:/data/images
       - ./data/models:/data/models
       - ./scripts:/app
+      - keras_cache:/root/.keras  # Share Keras cache with backend
     depends_on:
       elasticsearch:
         condition: service_healthy
@@ -148,6 +153,8 @@ services:
 
 volumes:
   elasticsearch_data:
+    driver: local
+  keras_cache:
     driver: local
   node_modules:
 

@@ -1,6 +1,6 @@
 """
 Descriptor Extractor Module
-Implements various image descriptors: Color Histogram, LBP, HOG, MPEG-7
+Implements various image descriptors: Color Histogram, LBP, HOG
 """
 
 import cv2
@@ -53,9 +53,17 @@ class ColorHistogramExtractor(DescriptorExtractor):
                 hist = cv2.calcHist([image], [i], None, [self.bins], [0, 256])
                 histograms.append(hist.flatten())
             
-            # Concatenate and normalize
+            # Concatenate histograms
             descriptor = np.concatenate(histograms)
-            descriptor = self.normalize_vector(descriptor)
+            
+            # L1 normalization (sum to 1) - required for proper histogram comparison
+            # This ensures Chi-Square and Bhattacharyya distances work correctly
+            sum_hist = np.sum(descriptor)
+            if sum_hist > 0:
+                descriptor = descriptor / sum_hist
+            
+            # Add small epsilon to avoid division by zero in distance calculations
+            descriptor = descriptor + 1e-10
             
             return descriptor.astype(np.float32)
             
@@ -141,7 +149,7 @@ class HOGExtractor(DescriptorExtractor):
             image: RGB or grayscale image
             
         Returns:
-            HOG feature vector
+            HOG feature vector (81-dim)
         """
         try:
             # Convert to grayscale
@@ -150,11 +158,12 @@ class HOGExtractor(DescriptorExtractor):
             else:
                 gray = image
             
-            # Resize to standard size for consistent descriptor length
+            # CRITICAL: Resize to standard size BEFORE HOG extraction
+            # This ensures consistent 81-dim output regardless of input size
             standard_size = (128, 128)
-            resized = cv2.resize(gray, standard_size)
+            resized = cv2.resize(gray, standard_size, interpolation=cv2.INTER_AREA)
             
-            # Extract HOG features
+            # Extract HOG features with fixed parameters
             features = hog(
                 resized,
                 orientations=self.orientations,
@@ -165,11 +174,20 @@ class HOGExtractor(DescriptorExtractor):
                 feature_vector=True
             )
             
+            # Ensure consistent dimension
+            # With 128x128 image, 8x8 cells, 3x3 blocks, 9 orientations = 81 dims
+            if len(features) != 81:
+                logger.warning(f"HOG produced {len(features)} dims instead of 81, padding/truncating")
+                if len(features) < 81:
+                    features = np.pad(features, (0, 81 - len(features)))
+                else:
+                    features = features[:81]
+            
             # Normalize
             descriptor = self.normalize_vector(features)
             
             if self.dimension is None:
-                self.dimension = len(descriptor)
+                self.dimension = 81
             
             return descriptor.astype(np.float32)
             
@@ -179,65 +197,165 @@ class HOGExtractor(DescriptorExtractor):
             return np.zeros(81, dtype=np.float32)
 
 
-class MPEG7Extractor(DescriptorExtractor):
+class EdgeHistogramExtractor(DescriptorExtractor):
     """
-    MPEG-7 descriptor extractor
-    Simplified implementation - in production, use pre-computed XML descriptors
+    Edge Histogram Descriptor
+    Captures edge distribution in different orientations
     """
     
-    def __init__(self):
-        self.dimension = 64  # Placeholder dimension
+    def __init__(self, bins: int = 64):
+        self.bins = bins
+        self.dimension = bins
     
     def extract(self, image: np.ndarray) -> np.ndarray:
         """
-        Extract MPEG-7 compatible features
-        This is a simplified version using color and edge information
+        Extract edge histogram using Sobel gradients
         
         Args:
-            image: RGB image
+            image: RGB or grayscale image
             
         Returns:
-            MPEG-7 style feature vector
+            Edge histogram feature vector
         """
         try:
-            # Simplified MPEG-7: combine color moments and edge histogram
+            # Convert to grayscale if needed
+            if len(image.shape) == 3:
+                gray = cv2.cvtColor(image, cv2.COLOR_RGB2GRAY)
+            else:
+                gray = image
             
-            # Color moments (mean, std for each channel)
-            color_moments = []
-            for i in range(3):
-                channel = image[:, :, i] if len(image.shape) == 3 else image
-                color_moments.extend([
-                    np.mean(channel),
-                    np.std(channel)
-                ])
-            
-            # Edge histogram (using Sobel)
-            gray = cv2.cvtColor(image, cv2.COLOR_RGB2GRAY) if len(image.shape) == 3 else image
+            # Compute gradients using Sobel
             sobel_x = cv2.Sobel(gray, cv2.CV_64F, 1, 0, ksize=3)
             sobel_y = cv2.Sobel(gray, cv2.CV_64F, 0, 1, ksize=3)
             
-            # Edge magnitude histogram
+            # Compute magnitude and orientation
             magnitude = np.sqrt(sobel_x**2 + sobel_y**2)
-            edge_hist, _ = np.histogram(magnitude.ravel(), bins=32, range=(0, 256))
+            orientation = np.arctan2(sobel_y, sobel_x)
             
-            # Combine features
-            descriptor = np.concatenate([
-                color_moments,
-                edge_hist / (edge_hist.sum() + 1e-7)
-            ])
+            # Create histogram of edge orientations weighted by magnitude
+            # Orientations range from -π to π
+            hist, _ = np.histogram(
+                orientation.ravel(),
+                bins=self.bins,
+                range=(-np.pi, np.pi),
+                weights=magnitude.ravel()
+            )
             
-            # Pad or truncate to fixed dimension
-            if len(descriptor) < self.dimension:
-                descriptor = np.pad(descriptor, (0, self.dimension - len(descriptor)))
+            # L2 normalization for cosine similarity
+            norm = np.linalg.norm(hist)
+            if norm > 1e-7:
+                descriptor = hist / norm
             else:
-                descriptor = descriptor[:self.dimension]
-            
-            descriptor = self.normalize_vector(descriptor)
+                descriptor = hist
             
             return descriptor.astype(np.float32)
             
         except Exception as e:
-            logger.error(f"MPEG-7 extraction failed: {e}")
+            logger.error(f"Edge histogram extraction failed: {e}")
+            return np.zeros(self.dimension, dtype=np.float32)
+
+
+class SIFTExtractor(DescriptorExtractor):
+    """
+    SIFT (Scale-Invariant Feature Transform) Descriptor
+    Uses RootSIFT normalization and statistical pooling for better discriminability
+    """
+    
+    def __init__(self, n_features: int = 100, descriptor_size: int = 128):
+        """
+        Args:
+            n_features: Maximum number of SIFT keypoints to detect
+            descriptor_size: Size of aggregated descriptor (128 for standard SIFT)
+        """
+        self.n_features = n_features
+        self.descriptor_size = descriptor_size
+        # Use half dimension for mean, half for std (64 + 64 = 128)
+        self.dimension = descriptor_size
+        
+        # Initialize SIFT detector
+        try:
+            self.sift = cv2.SIFT_create(nfeatures=n_features)
+        except AttributeError:
+            # Fallback for older OpenCV versions
+            self.sift = cv2.xfeatures2d.SIFT_create(nfeatures=n_features)
+    
+    def extract(self, image: np.ndarray) -> np.ndarray:
+        """
+        Extract SIFT features using RootSIFT + mean/std pooling aggregation
+        
+        This uses both mean and standard deviation pooling which captures
+        more information than max pooling alone. The combination of mean
+        and std creates a more robust global descriptor.
+        
+        Args:
+            image: RGB or grayscale image
+            
+        Returns:
+            Aggregated SIFT descriptor vector
+        """
+        try:
+            # Convert to grayscale if needed
+            if len(image.shape) == 3:
+                gray = cv2.cvtColor(image, cv2.COLOR_RGB2GRAY)
+            else:
+                gray = image
+            
+            # Detect keypoints and compute descriptors
+            keypoints, descriptors = self.sift.detectAndCompute(gray, None)
+            
+            if descriptors is None or len(descriptors) == 0:
+                logger.warning("No SIFT keypoints detected")
+                return np.zeros(self.dimension, dtype=np.float32)
+            
+            # Apply RootSIFT normalization (Arandjelovic & Zisserman, 2012)
+            # This significantly improves discriminability
+            eps = 1e-7
+            
+            # L1 normalize each descriptor
+            descriptors = descriptors / (np.sum(descriptors, axis=1, keepdims=True) + eps)
+            
+            # Square root (Hellinger kernel approximation)
+            descriptors = np.sqrt(descriptors + eps)
+            
+            # L2 normalize
+            descriptors = descriptors / (np.linalg.norm(descriptors, axis=1, keepdims=True) + eps)
+            
+            # Statistical pooling: combine mean and std
+            # This captures both central tendency and variance
+            # which is more informative than max pooling
+            mean_pool = np.mean(descriptors, axis=0)
+            std_pool = np.std(descriptors, axis=0)
+            
+            # Concatenate mean and std (64 + 64 = 128)
+            # If we have 128-dim descriptors, take first 64 dims for mean, last 64 for std
+            half_dim = self.dimension // 2
+            
+            # Resize if needed
+            if len(mean_pool) >= half_dim:
+                mean_part = mean_pool[:half_dim]
+                std_part = std_pool[:half_dim]
+            else:
+                mean_part = np.pad(mean_pool, (0, half_dim - len(mean_pool)))
+                std_part = np.pad(std_pool, (0, half_dim - len(std_pool)))
+            
+            # Concatenate mean and std
+            aggregated = np.concatenate([mean_part, std_part])
+            
+            # Ensure correct dimension
+            if len(aggregated) < self.dimension:
+                aggregated = np.pad(aggregated, (0, self.dimension - len(aggregated)))
+            elif len(aggregated) > self.dimension:
+                aggregated = aggregated[:self.dimension]
+            
+            # Final L2 normalization for cosine similarity
+            norm = np.linalg.norm(aggregated)
+            if norm > eps:
+                aggregated = aggregated / norm
+            
+            return aggregated.astype(np.float32)
+            
+        except Exception as e:
+            logger.error(f"SIFT extraction failed: {e}")
             return np.zeros(self.dimension, dtype=np.float32)
 
 
@@ -260,7 +378,8 @@ def extract_all_descriptors(
         'color': ColorHistogramExtractor(bins=8),
         'lbp': LBPExtractor(n_points=8, radius=1),
         'hog': HOGExtractor(),
-        'mpeg7': MPEG7Extractor()
+        'edge_histogram': EdgeHistogramExtractor(bins=64),
+        'sift': SIFTExtractor(n_features=100, descriptor_size=128)
     }
     
     results = {}

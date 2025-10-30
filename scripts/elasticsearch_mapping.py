@@ -78,6 +78,46 @@ FLICKR_INDEX_MAPPING = {
                 "similarity": "cosine"
             },
             
+            # Color Histogram - RGB color distribution
+            "color_histogram": {
+                "type": "dense_vector",
+                "dims": 24,  # 8 bins * 3 channels (RGB)
+                "index": True,
+                "similarity": "cosine"
+            },
+            
+            # LBP Features - Local Binary Pattern texture descriptor
+            "lbp_features": {
+                "type": "dense_vector",
+                "dims": 10,  # Uniform LBP (n_points + 2)
+                "index": True,
+                "similarity": "cosine"
+            },
+            
+            # HOG Features - Histogram of Oriented Gradients
+            "hog_features": {
+                "type": "dense_vector",
+                "dims": 81,  # Depends on image size and parameters
+                "index": True,
+                "similarity": "cosine"
+            },
+            
+            # Edge Histogram - Edge orientation distribution
+            "edge_histogram": {
+                "type": "dense_vector",
+                "dims": 64,  # Edge orientations in different directions
+                "index": True,
+                "similarity": "cosine"
+            },
+            
+            # SIFT Features - Scale-Invariant Feature Transform
+            "sift_features": {
+                "type": "dense_vector",
+                "dims": 64,  # PCA-reduced from 128 to 64 dimensions
+                "index": True,
+                "similarity": "cosine"
+            },
+            
             # Alternative: VGG block5_pool (smaller, faster)
             "vgg16_pool5": {
                 "type": "dense_vector",

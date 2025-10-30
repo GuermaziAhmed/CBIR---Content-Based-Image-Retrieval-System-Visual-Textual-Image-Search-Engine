@@ -241,20 +241,36 @@ class FlickrImageIngestion:
         self,
         csv_path: str,
         limit: Optional[int] = None,
+        offset: int = 0,
         skip_existing: bool = True
     ):
         """
         Ingest CSV file with Flickr metadata
+        
+        Args:
+            csv_path: Path to CSV file
+            limit: Maximum number of rows to process
+            offset: Number of rows to skip from the beginning
+            skip_existing: Skip already indexed images (not implemented yet)
         """
         logger.info(f"📂 Reading CSV: {csv_path}")
         
         # Read CSV
         df = pd.read_csv(csv_path)
+        total_rows = len(df)
         
+        # Apply offset
+        if offset > 0:
+            logger.info(f"⏭️  Skipping first {offset:,} rows")
+            df = df.iloc[offset:]
+        
+        # Apply limit
         if limit:
             df = df.head(limit)
+            logger.info(f"🎯 Limiting to {limit:,} rows")
         
-        logger.info(f"📊 Total rows: {len(df)}")
+        logger.info(f"📊 Total rows in CSV: {total_rows:,}")
+        logger.info(f"📊 Processing rows: {len(df):,} (from row {offset:,} to {offset + len(df):,})")
         logger.info(f"💾 Keep images after extraction: {self.keep_images}")
         if not self.keep_images:
             logger.info(f"💡 Disk space saving mode: Images will be deleted after feature extraction")
@@ -343,7 +359,8 @@ if __name__ == "__main__":
     parser.add_argument("--layer", type=str, default="fc2", help="Feature layer")
     parser.add_argument("--batch-size", type=int, default=100, help="Batch size")
     parser.add_argument("--workers", type=int, default=4, help="Number of worker threads")
-    parser.add_argument("--limit", type=int, default=None, help="Limit number of rows")
+    parser.add_argument("--limit", type=int, default=None, help="Maximum number of rows to process")
+    parser.add_argument("--offset", type=int, default=0, help="Skip first N rows (for resuming or chunked processing)")
     parser.add_argument("--keep-images", action="store_true", 
                         help="Keep downloaded images (default: delete after extraction to save 90%% disk space)")
     parser.add_argument("--temp-dir", type=str, default=None,
@@ -362,8 +379,12 @@ if __name__ == "__main__":
     print(f"Batch Size: {args.batch_size}")
     print(f"Workers: {args.workers}")
     print(f"Keep Images: {'YES (high disk usage)' if args.keep_images else 'NO (saves 90% disk space) ✅'}")
+    if args.offset > 0:
+        print(f"Offset: Skipping first {args.offset:,} rows")
     if args.limit:
-        print(f"Limit: {args.limit} images")
+        print(f"Limit: Processing {args.limit:,} rows")
+        if args.offset > 0:
+            print(f"Range: Rows {args.offset:,} to {args.offset + args.limit:,}")
     print("="*60 + "\n")
     
     # Create ingestion pipeline
@@ -381,4 +402,4 @@ if __name__ == "__main__":
     )
     
     # Run ingestion
-    pipeline.ingest_csv(args.csv, limit=args.limit)
+    pipeline.ingest_csv(args.csv, limit=args.limit, offset=args.offset)
